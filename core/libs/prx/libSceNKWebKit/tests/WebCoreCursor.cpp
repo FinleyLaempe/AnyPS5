@@ -91,6 +91,11 @@ static WebCore::FloatSize APS5_VABI FakeSize(const void*, ImageOrientation orien
     return CurrentImageState->size;
 }
 
+static WebCore::FloatSize APS5_VABI GrowingSize(const void* image, ImageOrientation orientation) {
+    const auto size = FakeSize(image, orientation);
+    return CurrentImageState->sizeCalls == 1 ? WebCore::FloatSize{1, 1} : size;
+}
+
 static OptionalIntPoint APS5_VABI FakeHotSpot(const void*) {
     CurrentImageState->hotSpotCalls += 1;
     OptionalIntPoint result;
@@ -148,10 +153,10 @@ static void TestConstructorWithInsideHotSpot() {
     Require(state.lastOrientation == 0);
 }
 
-static void TestSecondConstructorSameBehaviour() {
+static void TestSecondConstructorUsesUpdatedImageSize() {
     FakeImageState state;
     CurrentImageState = &state;
-    FakeImage image = MakeImage(reinterpret_cast<const void*>(&FakeSize), reinterpret_cast<const void*>(&FakeHotSpot));
+    FakeImage image = MakeImage(reinterpret_cast<const void*>(&GrowingSize), reinterpret_cast<const void*>(&FakeHotSpot));
     Cursor cursor{};
     WebCore::IntPoint specified{9, 19};
     _ZN7WebCore6CursorC2EPNS_5ImageERKNS_8IntPointE(&cursor, &image, &specified);
@@ -297,7 +302,7 @@ int main() {
     TestFromType();
     TestOutOfRange();
     TestConstructorWithInsideHotSpot();
-    TestSecondConstructorSameBehaviour();
+    TestSecondConstructorUsesUpdatedImageSize();
     TestIntrinsicHotSpotUsedWhenSpecifiedOutside();
     TestDefaultHotSpotWhenNothingContained();
     TestZeroSizeHasDefaultHotSpotAndSkipsIntrinsic();
